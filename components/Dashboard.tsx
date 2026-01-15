@@ -40,9 +40,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeSeniorId, activeSenio
         type: selectedType,
         imageUrl: base64,
         summary: details.summary || "I've analyzed the image.",
-        details: details,
-        fraudRisk: details.fraudRisk
+        details: details
       };
+
+      // Only add fraudRisk if it exists to avoid Firestore undefined error
+      if (details.fraudRisk) {
+        result.fraudRisk = details.fraudRisk;
+      }
       
       onAnalysisComplete(result);
     } catch (err: any) {

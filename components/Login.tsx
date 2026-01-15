@@ -17,8 +17,26 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const validate = () => {
+    if (!email || !password) {
+      setError("Please fill in both email and password.");
+      return false;
+    }
+    if (isSignup && !name) {
+      setError("Please enter your name.");
+      return false;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
+    
     setError(null);
     setLoading(true);
 
@@ -30,7 +48,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
       // App.tsx handles the state change via onAuthStateChanged
     } catch (err: any) {
-      setError(err.message || "Authentication failed. Please check your credentials.");
+      setError(err.message || "Authentication failed. Please check your internet connection.");
     } finally {
       setLoading(false);
     }
@@ -71,7 +89,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               onChange={(e) => setName(e.target.value)}
               className="w-full p-5 text-2xl border-4 border-gray-100 rounded-2xl focus:border-senior-secondary outline-none transition-all"
               placeholder="e.g. Betty"
-              required
+              required={isSignup}
             />
           </div>
         )}
@@ -116,10 +134,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       <div className="text-center pt-4">
         <button 
-          onClick={() => setIsSignup(!isSignup)}
+          onClick={() => {
+            setIsSignup(!isSignup);
+            setError(null);
+          }}
           className="text-senior-secondary font-black text-xl hover:underline"
         >
-          {isSignup ? 'Switch to Sign In' : 'Need an account? Sign Up'}
+          {isSignup ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
         </button>
       </div>
     </div>
