@@ -40,9 +40,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeSeniorId, activeSenio
         type: selectedType,
         imageUrl: base64,
         summary: details.summary || "I've analyzed the image.",
-        details: details,
-        fraudRisk: details.fraudRisk
+        details: details
       };
+
+      // Only add fraudRisk if it exists to avoid Firestore undefined error
+      if (details.fraudRisk) {
+        result.fraudRisk = details.fraudRisk;
+      }
       
       onAnalysisComplete(result);
     } catch (err: any) {
@@ -77,19 +81,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeSeniorId, activeSenio
            <div className="w-3 h-10 bg-senior-accent rounded-full"></div>
            <h1 className="text-4xl md:text-5xl font-black text-senior-primary tracking-tight">Viewing: {activeSeniorName}</h1>
         </div>
-        <p className="text-2xl text-gray-500 font-medium pl-6">EagleView: Select a scan type.</p>
+        <p className="text-2xl text-gray-500 font-medium pl-6">EagleView: Choose a scan mode.</p>
       </div>
-
-      {/* Daily Notification / Message for Senior */}
-      {prefs.dailyNotification && (
-        <div className="bg-senior-accent/15 border-l-[12px] border-senior-accent p-8 rounded-[2rem] shadow-sm animate-in slide-in-from-right-4 duration-500">
-           <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl">📝</span>
-              <h3 className="text-2xl font-black text-senior-primary uppercase tracking-tight">Today's Message</h3>
-           </div>
-           <p className="text-3xl font-bold text-senior-text leading-tight">{prefs.dailyNotification}</p>
-        </div>
-      )}
 
       <div className="grid gap-8">
         <ActionButton 
@@ -160,14 +153,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeSeniorId, activeSenio
           className="flex items-center justify-center gap-4 bg-white border-4 border-senior-primary p-8 rounded-[2.5rem] text-2xl font-black hover:bg-senior-primary hover:text-white transition-all shadow-xl group"
         >
           <div className="group-hover:scale-125 transition-transform"><ICONS.History /></div>
-          View History ({historyCount})
+          History ({historyCount})
         </button>
         <button 
           onClick={() => setView('profile')}
           className="flex items-center justify-center gap-4 bg-white border-4 border-senior-secondary p-8 rounded-[2.5rem] text-2xl font-black hover:bg-senior-secondary hover:text-white transition-all shadow-xl group"
         >
           <div className="group-hover:scale-125 transition-transform"><ICONS.Settings /></div>
-          All Settings
+          Settings
         </button>
       </div>
 
@@ -187,7 +180,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, activeSeniorId, activeSenio
             </div>
           </div>
           <h2 className="text-5xl font-black text-white mb-6">EagleView is Thinking...</h2>
-          <p className="text-3xl text-gray-300 max-w-xl leading-relaxed">Analyzing details for {activeSeniorName}...</p>
+          <p className="text-3xl text-gray-300 max-w-xl leading-relaxed">Checking every detail for {activeSeniorName}. Scanning for important information.</p>
         </div>
       )}
 
