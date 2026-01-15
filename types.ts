@@ -22,7 +22,12 @@ export interface UserPreferences {
   highContrast: boolean;
   fontSize: 'normal' | 'large';
   medicationSchedule: string;
-  caregiverNote?: string; // Note left by a caregiver for the senior
+  dailyNotification: string; // New field for daily notes/reminders
+}
+
+export interface ChatMessage {
+  role: 'user' | 'ai';
+  text: string;
 }
 
 export interface AnalysisResult {

@@ -1,8 +1,9 @@
 
-import React, { useEffect, useState } from 'react';
-import { AnalysisResult, AnalysisType } from '../types';
+import React, { useEffect, useState, useRef } from 'react';
+import { AnalysisResult, AnalysisType, ChatMessage } from '../types';
 import { ICONS } from '../constants';
 import { speak, stopSpeaking } from '../services/ttsService';
+import { askFollowUpQuestion } from '../services/geminiService';
 
 interface AnalysisViewProps {
   result: AnalysisResult;
@@ -11,31 +12,41 @@ interface AnalysisViewProps {
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({ result, onBack }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [userInput, setUserInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     handleSpeak();
     return () => stopSpeaking();
   }, [result]);
 
-  const handleSpeak = () => {
-    let textToRead = `Result: ${result.summary}. `;
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  const handleSpeak = (text?: string) => {
+    let textToRead = text || `Result: ${result.summary}. `;
     
-    if (result.type === AnalysisType.PILLBOX) {
-      const compartments = result.details.compartments || [];
-      if (compartments.length > 0) {
-        textToRead += "Here is what I see: ";
-        compartments.forEach((c: any) => {
-          textToRead += `${c.name} is ${c.status}. ${c.description}. `;
-        });
+    if (!text) {
+      if (result.type === AnalysisType.PILLBOX) {
+        const compartments = result.details.compartments || [];
+        if (compartments.length > 0) {
+          textToRead += "Here is what I see: ";
+          compartments.forEach((c: any) => {
+            textToRead += `${c.name} is ${c.status}. ${c.description}. `;
+          });
+        }
+      } else if (result.type === AnalysisType.FINE_PRINT) {
+        if (result.details.dosage) textToRead += `Dosage: ${result.details.dosage}. `;
+        if (result.details.warnings) textToRead += `Warnings: ${result.details.warnings}. `;
+        if (result.details.fullSnippet) textToRead += `Additional text found: ${result.details.fullSnippet}. `;
+      } else if (result.type === AnalysisType.DOCUMENT) {
+        textToRead += `Document type: ${result.details.docType}. `;
+        if (result.details.fraudRisk) textToRead += `Fraud risk level is ${result.details.fraudRisk}. `;
+        if (result.details.fraudReasoning) textToRead += `Reasoning: ${result.details.fraudReasoning}. `;
       }
-    } else if (result.type === AnalysisType.FINE_PRINT) {
-      if (result.details.dosage) textToRead += `Dosage: ${result.details.dosage}. `;
-      if (result.details.warnings) textToRead += `Warnings: ${result.details.warnings}. `;
-      if (result.details.fullSnippet) textToRead += `Additional text found: ${result.details.fullSnippet}. `;
-    } else if (result.type === AnalysisType.DOCUMENT) {
-      textToRead += `Document type: ${result.details.docType}. `;
-      if (result.details.fraudRisk) textToRead += `Fraud risk level is ${result.details.fraudRisk}. `;
-      if (result.details.fraudReasoning) textToRead += `Reasoning: ${result.details.fraudReasoning}. `;
     }
 
     setIsPlaying(true);
@@ -47,8 +58,29 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, onBack }) => {
     setIsPlaying(false);
   };
 
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userInput.trim() || isTyping) return;
+
+    const userMsg: ChatMessage = { role: 'user', text: userInput };
+    setMessages(prev => [...prev, userMsg]);
+    setUserInput('');
+    setIsTyping(true);
+
+    try {
+      const response = await askFollowUpQuestion(result.details, result.imageUrl, userMsg.text);
+      const aiMsg: ChatMessage = { role: 'ai', text: response };
+      setMessages(prev => [...prev, aiMsg]);
+      handleSpeak(response);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-lg border border-gray-100 sticky top-20 z-40">
         <button 
           onClick={onBack}
@@ -57,16 +89,16 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, onBack }) => {
           <ICONS.X /> Back
         </button>
         <button 
-          onClick={isPlaying ? stopAudio : handleSpeak}
+          onClick={isPlaying ? stopAudio : () => handleSpeak()}
           className="bg-senior-accent px-8 py-3 rounded-xl font-black text-xl flex items-center gap-3 shadow-md hover:scale-105 active:scale-95 transition-all text-senior-primary"
         >
           <ICONS.Speaker /> {isPlaying ? 'Mute' : 'Listen'}
         </button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-2 gap-8 items-start">
         {/* Visual Content */}
-        <div className="space-y-4">
+        <div className="space-y-4 lg:sticky lg:top-40">
           <div className="bg-white p-3 rounded-[2.5rem] shadow-2xl border-4 border-senior-secondary overflow-hidden aspect-square flex items-center justify-center">
              <img 
                src={result.imageUrl} 
@@ -79,7 +111,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, onBack }) => {
           </div>
         </div>
 
-        {/* Informational Content */}
+        {/* Informational Content & Chat */}
         <div className="space-y-6">
           <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl space-y-8 border-l-[12px] border-senior-accent">
             <div className="space-y-2">
@@ -109,13 +141,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, onBack }) => {
                   {result.details.warnings && <DataCard label="Crucial Warnings" value={result.details.warnings} color="bg-red-50 border-red-300 text-red-900" />}
                   {result.details.expiry && <DataCard label="Expires On" value={result.details.expiry} color="bg-green-50 border-green-200 text-green-900" />}
                 </div>
-                
-                {result.details.fullSnippet && (
-                  <div className="p-6 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                    <h4 className="text-lg font-black text-gray-400 uppercase mb-2">Detected Text</h4>
-                    <p className="text-xl leading-relaxed whitespace-pre-wrap font-medium italic">"{result.details.fullSnippet}"</p>
-                  </div>
-                )}
               </div>
             )}
 
@@ -128,19 +153,62 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, onBack }) => {
                   <h3 className="text-2xl font-black flex items-center gap-3 mb-2">
                     <span className="text-4xl">⚠️</span> Security Risk: {result.fraudRisk}
                   </h3>
-                  {result.details.fraudReasoning && (
-                    <p className="text-xl font-bold leading-tight">{result.details.fraudReasoning}</p>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  <DetailItem label="Document Type" value={result.details.docType} />
-                  <DetailItem label="Sender" value={result.details.sender} />
-                  {result.details.amount && <DetailItem label="Total Due" value={result.details.amount} />}
-                  {result.details.dueDate && <DetailItem label="Due Date" value={result.details.dueDate} />}
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Chat Section */}
+          <div className="bg-senior-primary/5 p-8 rounded-[2.5rem] border-4 border-senior-primary shadow-xl space-y-6">
+            <h3 className="text-3xl font-black text-senior-primary flex items-center gap-3">
+              <span>💬</span> Ask a Question
+            </h3>
+            
+            <div className="max-h-80 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+              {messages.length === 0 && (
+                <p className="text-xl text-gray-400 font-bold italic">Examples: "Is this safe to take with food?" or "When is the bill due?"</p>
+              )}
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] p-5 rounded-3xl text-xl font-bold shadow-md ${
+                    msg.role === 'user' 
+                      ? 'bg-senior-primary text-white rounded-tr-none' 
+                      : 'bg-white text-senior-primary rounded-tl-none border-2 border-senior-primary/20'
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="flex justify-start">
+                   <div className="bg-white p-4 rounded-3xl rounded-tl-none animate-pulse border-2 border-senior-primary/20">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-senior-primary rounded-full"></div>
+                        <div className="w-2 h-2 bg-senior-primary rounded-full"></div>
+                        <div className="w-2 h-2 bg-senior-primary rounded-full"></div>
+                      </div>
+                   </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            <form onSubmit={handleSendMessage} className="relative mt-4">
+              <input 
+                type="text"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                placeholder="Type your question..."
+                className="w-full p-6 pr-20 text-xl font-bold border-4 border-white rounded-2xl shadow-lg focus:border-senior-accent outline-none transition-all"
+              />
+              <button 
+                type="submit"
+                disabled={!userInput.trim() || isTyping}
+                className="absolute right-3 top-3 bottom-3 px-6 bg-senior-primary text-white rounded-xl font-black hover:bg-senior-secondary disabled:opacity-50 transition-all"
+              >
+                Send
+              </button>
+            </form>
           </div>
         </div>
       </div>
@@ -152,13 +220,6 @@ const DataCard = ({ label, value, color }: { label: string, value: string, color
   <div className={`p-6 rounded-2xl border-4 ${color}`}>
     <span className="block font-black uppercase text-xs tracking-widest opacity-60 mb-1">{label}</span>
     <span className="text-2xl font-black leading-tight">{value}</span>
-  </div>
-);
-
-const DetailItem: React.FC<{ label: string, value: string }> = ({ label, value }) => (
-  <div className="bg-gray-50 p-5 rounded-2xl border-2 border-gray-100">
-    <span className="block text-gray-400 font-black uppercase text-xs tracking-widest mb-1">{label}</span>
-    <span className="text-2xl font-black text-senior-primary">{value || 'Unknown'}</span>
   </div>
 );
 
