@@ -10,9 +10,10 @@ interface ProfileProps {
   onUpdatePrefs: (newPrefs: UserPreferences) => void;
   onLogout: () => void;
   onBack: () => void;
+  onReturnToSelector?: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, targetUserName, prefs, onUpdatePrefs, onLogout, onBack }) => {
+const Profile: React.FC<ProfileProps> = ({ user, targetUserName, prefs, onUpdatePrefs, onLogout, onBack, onReturnToSelector }) => {
   const [schedule, setSchedule] = useState(prefs.medicationSchedule);
   const [note, setNote] = useState(prefs.caregiverNote || '');
 
@@ -28,21 +29,31 @@ const Profile: React.FC<ProfileProps> = ({ user, targetUserName, prefs, onUpdate
   const isCaregiver = user.role === UserRole.CAREGIVER;
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto pb-20">
+    <div className="space-y-8 max-w-2xl mx-auto pb-20 animate-in slide-in-from-bottom-4">
       <div className="flex justify-between items-center">
         <h2 className="text-4xl font-bold text-senior-primary">Settings for {targetUserName}</h2>
         <button onClick={onBack} className="text-xl font-bold text-senior-secondary">Close</button>
       </div>
 
       <div className="bg-white p-8 rounded-3xl shadow-xl space-y-8 border-l-8 border-senior-accent">
-        <div className="flex items-center gap-6 pb-6 border-b">
-          <div className="bg-senior-primary text-white p-4 rounded-full">
-            <ICONS.User />
+        <div className="flex items-center justify-between pb-6 border-b">
+          <div className="flex items-center gap-6">
+            <div className="bg-senior-primary text-white p-4 rounded-full">
+              <ICONS.User />
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold">{targetUserName}</h3>
+              {isCaregiver && <p className="text-xl text-senior-secondary font-bold">Care managed by {user.name}</p>}
+            </div>
           </div>
-          <div>
-            <h3 className="text-3xl font-bold">{targetUserName}</h3>
-            {isCaregiver && <p className="text-xl text-senior-secondary font-bold">Care managed by {user.name}</p>}
-          </div>
+          {onReturnToSelector && (
+            <button 
+              onClick={onReturnToSelector}
+              className="bg-gray-100 text-senior-primary px-4 py-2 rounded-xl font-black text-sm uppercase tracking-wider hover:bg-gray-200 transition-colors"
+            >
+              Switch Patient
+            </button>
+          )}
         </div>
 
         {isCaregiver && (
@@ -93,9 +104,11 @@ const Profile: React.FC<ProfileProps> = ({ user, targetUserName, prefs, onUpdate
           />
         </section>
 
-        <div className="flex gap-4 pt-4">
-          <button onClick={handleSave} className="flex-1 bg-senior-primary text-white p-6 rounded-2xl text-2xl font-bold shadow-lg hover:bg-senior-secondary active:scale-95 transition-all">Save All Settings</button>
-          <button onClick={onLogout} className="px-8 border-4 border-red-500 text-red-600 rounded-2xl text-xl font-bold hover:bg-red-50">Log Out</button>
+        <div className="flex flex-col gap-4 pt-4">
+          <button onClick={handleSave} className="w-full bg-senior-primary text-white p-6 rounded-2xl text-2xl font-bold shadow-lg hover:bg-senior-secondary active:scale-95 transition-all">Save All Settings</button>
+          <div className="flex gap-4">
+            <button onClick={onLogout} className="flex-1 border-4 border-red-500 text-red-600 rounded-2xl text-xl font-bold py-4 hover:bg-red-50">Log Out</button>
+          </div>
         </div>
       </div>
     </div>

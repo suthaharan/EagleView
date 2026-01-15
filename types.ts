@@ -16,13 +16,14 @@ export interface User {
   email: string;
   role: UserRole;
   assignedSeniors?: string[]; // IDs of seniors if role is CareGiver
+  caregiverId?: string; // ID of the caregiver if role is Senior
 }
 
 export interface UserPreferences {
   highContrast: boolean;
   fontSize: 'normal' | 'large';
   medicationSchedule: string;
-  caregiverNote?: string; // Note left by a caregiver for the senior
+  caregiverNote: string;
 }
 
 export interface AnalysisResult {

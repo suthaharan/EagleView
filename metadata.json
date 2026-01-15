@@ -1,6 +1,6 @@
 {
   "name": "EagleView",
-  "description": "An AI-powered visual assistant for seniors and caregivers, providing pillbox identification, fine print reading, and document fraud detection.",
+  "description": "An AI-powered visual assistant for seniors and caregivers, featuring advanced scanning for medications, documents, and labels.",
   "requestFramePermissions": [
     "camera"
   ]

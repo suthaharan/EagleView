@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { ICONS } from '../constants';
-import { loginUser, signUpUser } from '../services/firebaseService';
+import { loginUser, signUpUser } from '../firebase';
 
 interface LoginProps {
   onLogin: (user: User) => void;
