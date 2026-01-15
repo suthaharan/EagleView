@@ -22,6 +22,7 @@ export interface UserPreferences {
   highContrast: boolean;
   fontSize: 'normal' | 'large';
   medicationSchedule: string;
+  dailyNotification: string; // New field for daily notes/reminders
 }
 
 export interface AnalysisResult {
